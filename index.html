@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heyrðu mig — Kostnaðaryfirlit · Panic Production</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
+<style>
+:root{ color-scheme: light;
+  --navy:#1F3864; --blue:#2E5496; --orange:#ED7D31; --green:#2E7D32; --red:#C0392B;
+  --grey:#6b7280; --lt:#eef2f8; --line:#d9dee8; --bg:#f6f8fc; --card:#ffffff; --ink:#1b2233; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 18px 56px;}
+.top{background:var(--navy);color:#fff;border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;border-bottom:4px solid var(--orange)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,#26406e,#16243f);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--orange);font-size:13px;border:1px solid #34507f}
+.brand h1{font-size:16px;margin:0;letter-spacing:.3px}
+.brand .sub{font-size:11px;color:#b9c6df;margin-top:1px}
+.tag{margin-left:auto;font-size:11px;color:#cdd8ee;text-align:right;line-height:1.5}
+.rate{display:inline-block;background:var(--orange);color:#fff;font-weight:700;border-radius:6px;padding:2px 8px;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.kpi .k{font-size:10.5px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.kpi .v{font-size:19px;font-weight:800;color:var(--navy);margin-top:3px}
+.kpi .s{font-size:10.5px;color:var(--grey);margin-top:1px}
+.kpi .v.orange{color:var(--orange)} .kpi .v.red{color:var(--red)}
+.grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{font-size:13px;margin:0 0 2px;color:var(--navy);letter-spacing:.2px}
+.card .hint{font-size:11px;color:var(--grey);margin:0 0 10px}
+.chartbox{position:relative;height:250px}
+.chartbox.tall{height:300px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.4px}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.tot td{font-weight:800;color:var(--navy);border-top:2px solid var(--navy)}
+.pill{display:inline-block;font-size:10px;font-weight:700;border-radius:20px;padding:1px 8px;white-space:nowrap}
+.p-a{background:#e7eefc;color:var(--navy)} .p-b{background:#fdebdc;color:#9a4a12} .p-c{background:#eef0f3;color:#41506a}
+.sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+.sumhead{font-size:11px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.sumtext{font-size:12px;color:#2b3549;line-height:1.5}
+.full{margin-top:14px}
+.note{font-size:11px;color:var(--grey);margin-top:8px}
+.foot{font-size:10.5px;color:var(--grey);margin-top:18px;border-top:1px solid var(--line);padding-top:10px;text-align:center}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.filters select,.filters input{font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}
+.filters input{flex:1;min-width:160px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--lt)}
+.flag{color:var(--red);font-weight:700}
+.scroll{overflow-x:auto}
+.bar{height:8px;border-radius:4px;background:var(--lt);overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:var(--blue)}
+@media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.two,.sumgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <div class="logo">PP</div>
+      <div><h1>Heyrðu mig — Kostnaðaryfirlit</h1>
+      <div class="sub">Panic Production, félag · kt. 500605-1620 · danslistaverk eftir Sveinbjörgu Þórhallsdóttur</div></div>
+    </div>
+    <div class="tag"><span class="rate">KOSTNAÐARHLIÐ</span> · tekjur ekki skráðar<br>Uppfært <b style="color:#fff" id="upd"></b> · <b style="color:#fff" id="nfaer"></b> færslur</div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card full" style="border-top:3px solid var(--orange);margin-top:14px">
+    <h2>Samantekt <span style="font-weight:600;color:var(--grey);font-size:11px">— kostnaðaruppgjör byggt á kvittunum í Google Drive · 22. ágúst 2026</span></h2>
+    <div class="sumgrid">
+      <div><div class="sumhead">Hvar liggur kostnaðurinn</div>
+        <div class="sumtext" id="sum1"></div></div>
+      <div><div class="sumhead">Hver lagði út</div>
+        <div class="sumtext" id="sum2"></div></div>
+      <div><div class="sumhead">Tímalína</div>
+        <div class="sumtext" id="sum3"></div></div>
+      <div><div class="sumhead">Þarf að staðfesta</div>
+        <div class="sumtext" id="sum4"></div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Kostnaður eftir flokkum</h2>
+      <p class="hint">ISK með VSK. Appelsínugult = laun og verktakagreiðslur, blátt = annar rekstrarkostnaður.</p>
+      <div class="chartbox tall"><canvas id="catchart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Hver lagði út</h2>
+      <p class="hint">Útlagður kostnaður einstaklinga vs. reikningar stílaðir á félagið.</p>
+      <div class="chartbox"><canvas id="paychart"></canvas></div>
+      <table id="paytbl"><thead><tr><th>Greiðandi</th><th class="r">Færslur</th><th class="r">ISK</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Kostnaður eftir mánuðum</h2>
+      <p class="hint">Staflað eftir flokkum. Laun bókast á útgáfudag reiknings.</p>
+      <div class="chartbox"><canvas id="monchart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Rekstrarreikningur verkefnis</h2>
+      <p class="hint">Tekjur liggja ekki fyrir – aðeins gjöld.</p>
+      <table id="rr"><thead><tr><th>Liður</th><th class="r">ISK</th><th class="r">%</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h2>Stærstu einstöku færslur</h2>
+      <p class="hint">Tíu stærstu reikningar / kvittanir.</p>
+      <table id="top10"><thead><tr><th>Dags.</th><th>Seljandi</th><th>Flokkur</th><th class="r">ISK</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Flokkur × greiðandi</h2>
+      <p class="hint">Hver lagði út fyrir hvað (ISK þús.).</p>
+      <div class="scroll"><table id="cross"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card full">
+    <h2>Færslublað</h2>
+    <p class="hint">Allar færslur. Síaðu eftir flokki, greiðanda eða leitarorði. Rauðar athugasemdir þarfnast staðfestingar.</p>
+    <div class="filters">
+      <select id="fcat"><option value="">Allir flokkar</option></select>
+      <select id="fpay"><option value="">Allir greiðendur</option></select>
+      <input id="fq" placeholder="Leita í seljanda / lýsingu…">
+      <button class="btn" id="fclr">Hreinsa</button>
+    </div>
+    <div class="scroll"><table id="tx"><thead><tr><th>Nr.</th><th>Dags.</th><th>Seljandi</th><th>Lýsing</th><th>Flokkur</th><th>Greiðandi</th><th class="r">Upphæð</th><th class="r">ISK</th><th>Athugasemd</th></tr></thead><tbody></tbody></table></div>
+    <p class="note" id="txsum"></p>
+  </div>
+
+  <div class="foot">
+    Panic Production · Heyrðu mig · Kostnaðaruppgjör byggt á 90+ kvittunum og reikningum í Google Drive.
+    Erlendar greiðslur umreiknaðar á áætluðu gengi (EUR 145 · USD 125). Tekjuhlið ekki meðtalin. Villur geta leynst í OCR-lestri kvittana.
+  </div>
+</div>
+
+<script>
+// =====================================================================
+//  CONFIG — gögn úr Heyrdu_mig_kostnadaruppgjor.xlsx (Færslublað)
+// =====================================================================
+const CONFIG = {
+  UPDATED: '22. ágúst 2026',
+  FX: {ISK:1, EUR:145, USD:125},
+  CAT_ORDER: ['Laun og verktakagreiðslur','Efni – leikmynd og búningar','Húsnæði – æfingasalur','Matur og veitingar','Ferðakostnaður','Ljósmyndun','Búningar og förðun','Markaðsefni og prentun','Tæki, hljóð og hugbúnaður','Annað'],
+  TX: [{"d": "2026-08-04", "s": "Krónan Austurveri", "l": "Matvara (kjúklingur, ávextir, kaffi o.fl.)", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 17989, "m": "ISK", "isk": 17989, "n": ""}, {"d": "2026-08-10", "s": "Kaffihúsið Garðurinn", "l": "Súpa x2 og kaffi", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 5050, "m": "ISK", "isk": 5050, "n": ""}, {"d": "2026-08-10", "s": "Krónan Hallveigarstíg", "l": "Matvara / snarl", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 6455, "m": "ISK", "isk": 6455, "n": ""}, {"d": "2026-08-21", "s": "Krónan Austurveri", "l": "Matvara / snarl", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 6157, "m": "ISK", "isk": 6157, "n": ""}, {"d": "2026-06-02", "s": "Hygge Bakery Seljavegi", "l": "Brauð með áleggi og focaccia", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 3582, "m": "ISK", "isk": 3582, "n": ""}, {"d": "2026-08-03", "s": "Hygge Bakery Seljavegi", "l": "Flat white og brauð með áleggi", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 2550, "m": "ISK", "isk": 2550, "n": "Upphæð reiknuð 960 + 1.590 – staðfest"}, {"d": "2026-08-07", "s": "Kjaran ehf.", "l": "Jantac límband 50mm x 50m", "c": "Efni – leikmynd og búningar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 6777, "m": "ISK", "isk": 6777, "n": "Reikn. SRB2605172, staðgreitt"}, {"d": "2026-08-07", "s": "Chickpea", "l": "5 samlokur", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 13950, "m": "ISK", "isk": 13950, "n": ""}, {"d": "2026-08-07", "s": "BYKO Granda", "l": "Epoxy, múrtappar, lykkjuskrúfur o.fl.", "c": "Efni – leikmynd og búningar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 6176, "m": "ISK", "isk": 6176, "n": "Reikn. 213RJ0235097"}, {"d": "2026-08-13", "s": "BYKO Granda", "l": "Kópal, sóplistar, kapalbindi, pensill", "c": "Efni – leikmynd og búningar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 13533, "m": "ISK", "isk": 13533, "n": "Reikn. 213RB0081510 – sama kvittun einnig í rót (talin einu sinni)"}, {"d": "2026-07-08", "s": "A4 Skeifan", "l": "Kennaratyggjó og kortaprjónar", "c": "Efni – leikmynd og búningar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 1778, "m": "ISK", "isk": 1778, "n": ""}, {"d": "2026-08-14", "s": "Bónus Kringlan", "l": "Popp, saltstangir, ávextir, servíettur", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 6420, "m": "ISK", "isk": 6420, "n": "Dagsetning á kvittun illlæsileg (14.08.25/26)"}, {"d": "2026-06-11", "s": "Krambúðin", "l": "Drykkir, ávextir, brauð", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 3251, "m": "ISK", "isk": 3251, "n": ""}, {"d": "2026-08-14", "s": "Hagkaup Kringlan", "l": "Te, súkkulaði, Circolo hringir", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 10472, "m": "ISK", "isk": 10472, "n": ""}, {"d": "2026-08-04", "s": "Bakarameistarinn Austurveri", "l": "Súrdeigsbrauð", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 1129, "m": "ISK", "isk": 1129, "n": ""}, {"d": "2026-08-15", "s": "Apótekarinn Austurveri", "l": "Eyrnatappar, varasalvi, vítamín, Paratabs", "c": "Annað", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 10340, "m": "ISK", "isk": 10340, "n": ""}, {"d": "2026-05-23", "s": "Nettó Granda", "l": "Matvara (stór innkaup)", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Rót (Heyrðu mig)", "u": 38163, "m": "ISK", "isk": 38163, "n": "Skjal í rót – greitt með korti ****8846 (sama kort og útlagt SB)"}, {"d": "2026-03-21", "s": "Icelandair", "l": "Flug FI555/FI554 Brussel–Keflavík 9.–17. júní, Margrét Sara", "c": "Ferðakostnaður", "p": "Sveinbjörg Þórhallsdóttir", "f": "Rót (Heyrðu mig)", "u": 72647, "m": "ISK", "isk": 72647, "n": "Greiðandi Sveinbjörg, kort ****8497"}, {"d": "2026-08-10", "s": "Handskrifaður reikningur (A4 nr. 23)", "l": "Útlagt v/ danslistaverks í Ásmundarsal – akstur o.fl. (28.347 + 21.653)", "c": "Ferðakostnaður", "p": "Friðjón Ólafsson", "f": "Útlagður kostnaður Aðrir", "u": 50000, "m": "ISK", "isk": 50000, "n": "Handskrifaður reikningur – greiðandi staðfestur"}, {"d": "2026-07-06", "s": "Pixel prentþjónusta", "l": "Veggspjöld A3, 50 stk", "c": "Markaðsefni og prentun", "p": "Ragnheiður", "f": "Útlagður kostnaður Aðrir", "u": 21796, "m": "ISK", "isk": 21796, "n": "Reikn. SR265971 – sama kvittun einnig í rót (HEIC), talin einu sinni – staðfest"}, {"d": "2026-08-13", "s": "Íhlutir ehf.", "l": "XLR/RCA breytir, Toslink snúra, RCA snúra", "c": "Tæki, hljóð og hugbúnaður", "p": "Aðrir – óþekkt (kort ****3961)", "f": "Útlagður kostnaður Aðrir", "u": 11245, "m": "ISK", "isk": 11245, "n": "Reikn. 247754"}, {"d": "2026-05-05", "s": "JYSK Skeifan", "l": "Garn (merino, mohair)", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 9478, "m": "ISK", "isk": 9478, "n": ""}, {"d": "2026-06-03", "s": "Samasem", "l": "Fresíur x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 4980, "m": "ISK", "isk": 4980, "n": ""}, {"d": "2026-05-20", "s": "Föndra", "l": "Títuprjónar og tvinni", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 1985, "m": "ISK", "isk": 1985, "n": ""}, {"d": "2026-05-18", "s": "JYSK Skeifan", "l": "Natur uld teppi", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 1495, "m": "ISK", "isk": 1495, "n": ""}, {"d": "2026-08-10", "s": "JYSK Granda", "l": "Austra gardínur x7", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 28015, "m": "ISK", "isk": 28015, "n": ""}, {"d": "2026-07-01", "s": "JYSK Granda", "l": "Vörur (kvittun illlæsileg)", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 4340, "m": "ISK", "isk": 4340, "n": "Dagsetning aðeins '07 26' – dagur óviss"}, {"d": "2026-07-24", "s": "JYSK Smáratorgi", "l": "Ljósdempari og Austra gardína", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 8690, "m": "ISK", "isk": 8690, "n": ""}, {"d": "2026-05-27", "s": "JYSK Skeifan", "l": "Kugleask púði", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 2995, "m": "ISK", "isk": 2995, "n": ""}, {"d": "2026-06-05", "s": "JYSK Skeifan", "l": "Natur uld x3 og merino garn", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 6410, "m": "ISK", "isk": 6410, "n": ""}, {"d": "2026-05-27", "s": "JYSK Skeifan", "l": "Velveteen, úðabrúsar, Natur uld x5", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 12250, "m": "ISK", "isk": 12250, "n": ""}, {"d": "2026-06-02", "s": "JYSK Skeifan", "l": "Natur uld x6, Incawool", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 10915, "m": "ISK", "isk": 10915, "n": ""}, {"d": "2026-05-21", "s": "JYSK Skeifan", "l": "Velveteen x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 2990, "m": "ISK", "isk": 2990, "n": ""}, {"d": "2026-05-18", "s": "Góði hirðirinn", "l": "Notaðir munir", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5000, "m": "ISK", "isk": 5000, "n": ""}, {"d": "2026-05-21", "s": "Lindex Kringlan", "l": "Nærbuxur x3 (3 fyrir 2)", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5448, "m": "ISK", "isk": 5448, "n": ""}, {"d": "2026-08-10", "s": "Hagkaup Skeifan", "l": "Hárspray, gel, hárteygjur", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 3816, "m": "ISK", "isk": 3816, "n": ""}, {"d": "2026-08-10", "s": "JYSK Skeifan", "l": "Austra gardínur x10 og ljósdempandi x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 48940, "m": "ISK", "isk": 48940, "n": ""}, {"d": "2026-08-05", "s": "BYKO Granda", "l": "Tesa límbönd og brotblaðshnífur", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 7897, "m": "ISK", "isk": 7897, "n": ""}, {"d": "2026-08-13", "s": "JYSK Granda", "l": "Herðatré og Austra gardína", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 6544, "m": "ISK", "isk": 6544, "n": ""}, {"d": "2026-05-22", "s": "Lindex Kringlan", "l": "Nærbuxur", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 2699, "m": "ISK", "isk": 2699, "n": ""}, {"d": "2026-06-12", "s": "Kappahl Kringlan", "l": "Biker shorts", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 3999, "m": "ISK", "isk": 3999, "n": "Kortakvittun (LKA19) fylgir – sama færsla"}, {"d": "2026-06-18", "s": "BYKO Granda", "l": "Plastdúkur, rakasperra, málaramotta", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 9797, "m": "ISK", "isk": 9797, "n": ""}, {"d": "2026-06-08", "s": "BYKO Granda", "l": "Tesa precision límband x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 6798, "m": "ISK", "isk": 6798, "n": ""}, {"d": "2026-06-25", "s": "JYSK Smáratorgi", "l": "Kugleask púðar x8", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 14534, "m": "ISK", "isk": 14534, "n": ""}, {"d": "2026-06-25", "s": "JYSK Skeifan", "l": "Kugleask púðar x8", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 16110, "m": "ISK", "isk": 16110, "n": ""}, {"d": "2026-06-15", "s": "Metta Sport", "l": "Leggings x2", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 16980, "m": "ISK", "isk": 16980, "n": "Kvittun stíluð á Sveinbjörgu en í möppu Jóní"}, {"d": "2026-05-22", "s": "H&M Kringlan", "l": "Lingerie tops x3", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5425, "m": "ISK", "isk": 5425, "n": ""}, {"d": "2026-06-04", "s": "Spútnik Kringlan", "l": "Levi's stuttbuxur x2", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 10400, "m": "ISK", "isk": 10400, "n": ""}, {"d": "2026-05-21", "s": "H&M Kringlan", "l": "Lingerie tops x2", "c": "Búningar og förðun", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 3590, "m": "ISK", "isk": 3590, "n": ""}, {"d": "2026-06-01", "s": "Litir og föndur", "l": "Föndurvörur x2 (15% afsl.)", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 8823, "m": "ISK", "isk": 8823, "n": ""}, {"d": "2026-06-08", "s": "Dynjandi", "l": "Heyrnarhlífar Hi-Viz", "c": "Tæki, hljóð og hugbúnaður", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5987, "m": "ISK", "isk": 5987, "n": ""}, {"d": "2026-06-25", "s": "Slippfélagið", "l": "Málning ARA Goud donker", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 4576, "m": "ISK", "isk": 4576, "n": ""}, {"d": "2026-06-12", "s": "Vogue fyrir heimilið", "l": "Seraflex og tricot efni", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 7300, "m": "ISK", "isk": 7300, "n": ""}, {"d": "2026-06-08", "s": "Vogue fyrir heimilið", "l": "Denimtvinni og tvinni", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 2570, "m": "ISK", "isk": 2570, "n": ""}, {"d": "2026-05-21", "s": "Í réttum ramma", "l": "Strigi bómull ógrunnaður, 10 ein.", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 44816, "m": "ISK", "isk": 44816, "n": "Reikn. 0078249"}, {"d": "2026-05-18", "s": "Í réttum ramma", "l": "Strigi bómull ógrunnaður, 1 ein.", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5042, "m": "ISK", "isk": 5042, "n": "Reikn. 0078212"}, {"d": "2026-05-05", "s": "Slippfélagið", "l": "Museo cotton og akrýlmálning", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 13802, "m": "ISK", "isk": 13802, "n": ""}, {"d": "2026-05-21", "s": "Vogue fyrir heimilið", "l": "Mesh natural x4", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 11200, "m": "ISK", "isk": 11200, "n": ""}, {"d": "2026-06-01", "s": "BYKO Granda", "l": "Tesa límband, plastdúkur, pappakassi", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 11232, "m": "ISK", "isk": 11232, "n": ""}, {"d": "2026-06-05", "s": "Vogue fyrir heimilið", "l": "Denim stretch off-white x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 6730, "m": "ISK", "isk": 6730, "n": ""}, {"d": "2026-06-01", "s": "Í réttum ramma", "l": "Strigi bómull ógrunnaður, 40 ein. (pantað og sótt af Jóní)", "c": "Efni – leikmynd og búningar", "p": "Panic Production (krafa í heimabanka)", "f": "Útlagður kostnaður Jóní", "u": 179264, "m": "ISK", "isk": 179264, "n": "Reikn. 0078311 – krafa á félagið, afrit einnig í rót"}, {"d": "2026-06-12", "s": "Bauhaus", "l": "Genève gardínur 400 cm x24", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 83952, "m": "ISK", "isk": 83952, "n": ""}, {"d": "2026-08-10", "s": "Vogue fyrir heimilið", "l": "Tvinni og krókar", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 4480, "m": "ISK", "isk": 4480, "n": ""}, {"d": "2026-08-04", "s": "Vogue fyrir heimilið", "l": "Ömmuborðar, tvinni, krókar", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 3290, "m": "ISK", "isk": 3290, "n": ""}, {"d": "2026-07-03", "s": "Vogue fyrir heimilið", "l": "Spirallásar, hook and bars, denim stretch", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 20400, "m": "ISK", "isk": 20400, "n": ""}, {"d": "2026-06-15", "s": "Vogue fyrir heimilið", "l": "Mesh navy x2", "c": "Efni – leikmynd og búningar", "p": "Jóní Jónsdóttir", "f": "Útlagður kostnaður Jóní", "u": 5600, "m": "ISK", "isk": 5600, "n": ""}, {"d": "2026-08-14", "s": "ELKO Granda", "l": "Fjöltengi x3 og stereo audio snúrur x2", "c": "Tæki, hljóð og hugbúnaður", "p": "Urður Hákonardóttir", "f": "Útlagður kostnaður Aðrir", "u": 6575, "m": "ISK", "isk": 6575, "n": "Greiðandi staðfestur: Urður"}, {"d": "2026-08-09", "s": "Krua Thai Skólavörðustíg", "l": "Panang karrí x3 og Nam tok – matur fyrir hóp", "c": "Matur og veitingar", "p": "Kjartan Darri Kristjánsson", "f": "Útlagður kostnaður Aðrir", "u": 15000, "m": "ISK", "isk": 15000, "n": "Greiðandi staðfestur: Darri"}, {"d": "2026-08-22", "s": "Vínbúðin Skeifunni", "l": "Gull Lite 24 fl. og Francois Martenot 4 fl.", "c": "Matur og veitingar", "p": "Sveinbjörg Þórhallsdóttir", "f": "Útlagður kostnaður Sveinbjorg", "u": 23332, "m": "ISK", "isk": 23332, "n": "Kort ****8846"}, {"d": "2026-06-26", "s": "Urður Hákonardóttir", "l": "Tónlistarsköpun – reikn. WBJ-1045", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-08-02", "s": "Urður Hákonardóttir", "l": "Tónlistarsköpun – reikn. WBJ-1047", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-07-01", "s": "Jóní Jónsdóttir", "l": "Leikmynd, búningar, sjónrænt útlit – reikn. 01", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-08-04", "s": "Jóní Jónsdóttir", "l": "Leikmynd, búningar, sjónrænt útlit – reikn. 02", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-06-08", "s": "Dilja Sveinsdóttir", "l": "Sviðslistir 20 dagar – reikn. IZA-1010", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-08-17", "s": "Kjartan Darri Kristjánsson", "l": "Reikn. 000191 v/ Heyrðu mig", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 750000, "m": "ISK", "isk": 750000, "n": ""}, {"d": "2026-06-25", "s": "Proman Agilitas NV (Amplo)", "l": "Margrét Sara Guðjónsdóttir – dramaturg 10.–12. júní, reikn. 2026111414", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 720, "m": "EUR", "isk": 104400, "n": ""}, {"d": "2026-06-25", "s": "Proman Agilitas NV (Amplo)", "l": "Margrét Sara Guðjónsdóttir – dramaturg 15.–16. júní, reikn. 2026111398", "c": "Laun og verktakagreiðslur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 480, "m": "EUR", "isk": 69600, "n": ""}, {"d": "2026-05-26", "s": "Dansverkstæðið", "l": "Leiga á sal – maí, reikn. ZWN-2447", "c": "Húsnæði – æfingasalur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 150248, "m": "ISK", "isk": 150248, "n": ""}, {"d": "2026-05-26", "s": "Dansverkstæðið", "l": "Leiga á sal – júní, reikn. ZWN-2448", "c": "Húsnæði – æfingasalur", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 150248, "m": "ISK", "isk": 150248, "n": ""}, {"d": "2026-07-08", "s": "Gunnlöð Jóna Rúnarsdóttir", "l": "Ljósmyndataka – reikn. MUC-1595", "c": "Ljósmyndun", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 56600, "m": "ISK", "isk": 56600, "n": ""}, {"d": "2026-08-18", "s": "Gunnlöð Jóna Rúnarsdóttir", "l": "Myndataka og myndvinnsla – reikn. MUC-1606", "c": "Ljósmyndun", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 45000, "m": "ISK", "isk": 45000, "n": ""}, {"d": "2026-08-07", "s": "Christopher Lund ehf.", "l": "Prentun PermaJet 50x75 cm x3 – reikn. 0001135", "c": "Markaðsefni og prentun", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 27900, "m": "ISK", "isk": 27900, "n": "Tvö eintök í rót – talið einu sinni"}, {"d": "2026-08-15", "s": "Reykjavík Gastronomy (Nomy)", "l": "Kjöt- og ostabakkar x20 og heimsending – reikn. 0000662", "c": "Matur og veitingar", "p": "Panic Production (reikningur á félagið)", "f": "Rót (Heyrðu mig)", "u": 61320, "m": "ISK", "isk": 61320, "n": "Auk seðilgjalds 124 kr."}, {"d": "2026-08-07", "s": "Figure 53 LLC", "l": "QLab 5 Bundle leiga 7.–16. ágúst", "c": "Tæki, hljóð og hugbúnaður", "p": "Sveinbjörg Þórhallsdóttir", "f": "Rót (Heyrðu mig)", "u": 150, "m": "USD", "isk": 18750, "n": "Erlend greiðsla í USD – kort ****4101, viðtakandi Sveinbjörg"}, {"d": "2026-06-09", "s": "Hreyfill", "l": "Leigubíll 9. júní (Margrét Sara)", "c": "Ferðakostnaður", "p": "Margrét Sara Guðjónsdóttir (kort ****2533)", "f": "Rót (Heyrðu mig)", "u": 3140, "m": "ISK", "isk": 3140, "n": ""}, {"d": "2026-06-17", "s": "Hreyfill", "l": "Leigubíll Granaskjól–BSÍ 17. júní (Margrét Sara)", "c": "Ferðakostnaður", "p": "Margrét Sara Guðjónsdóttir (kort ****2533)", "f": "Rót (Heyrðu mig)", "u": 4080, "m": "ISK", "isk": 4080, "n": ""}, {"d": "2026-06-09", "s": "NMBS/SNCB", "l": "Lest Bruxelles-Midi – Brussels Airport", "c": "Ferðakostnaður", "p": "Margrét Sara Guðjónsdóttir (kort ****2533)", "f": "Rót (Heyrðu mig)", "u": 11.6, "m": "EUR", "isk": 1682, "n": ""}, {"d": "2026-06-17", "s": "NMBS/SNCB", "l": "Lest Brussels Airport – Bruxelles-Midi", "c": "Ferðakostnaður", "p": "Margrét Sara Guðjónsdóttir (kort ****2533)", "f": "Rót (Heyrðu mig)", "u": 11.6, "m": "EUR", "isk": 1682, "n": ""}, {"d": "2026-06-17", "s": "Icelandia / Reykjavik Excursions", "l": "Flybus 17. júní", "c": "Ferðakostnaður", "p": "Margrét Sara Guðjónsdóttir (kort ****2533)", "f": "Rót (Heyrðu mig)", "u": 3999, "m": "ISK", "isk": 3999, "n": ""}, {"d": "2026-06-09", "s": "Icelandia / Reykjavik Excursions", "l": "Flybus KEF–BSÍ 9. júní (voucher POSKE-KUVBP9)", "c": "Ferðakostnaður", "p": "Óþekkt", "f": "Rót (Heyrðu mig)", "u": null, "m": "ISK", "isk": 0, "n": "Aðeins voucher – engin upphæð á skjali, líklega 3.999 kr."}]
+};
+// =====================================================================
+const TX = CONFIG.TX;
+const fmt = v => Math.round(v).toLocaleString('is-IS').replace(/,/g,'.');
+const fmtK = v => fmt(v/1000)+' þ.';
+const MON = ['jan','feb','mar','apr','maí','jún','júl','ágú','sep','okt','nóv','des'];
+const fmtD = iso => { const p=iso.split('-'); return parseInt(p[2])+'. '+MON[parseInt(p[1])-1]; };
+const sum = a => a.reduce((s,t)=>s+t.isk,0);
+const by = (k) => { const m={}; TX.forEach(t=>{ m[t[k]]=(m[t[k]]||0)+t.isk; }); return m; };
+const cnt = (k) => { const m={}; TX.forEach(t=>{ m[t[k]]=(m[t[k]]||0)+1; }); return m; };
+const TOTAL = sum(TX);
+const byCat = by('c'), byPay = by('p'), cntPay = cnt('p');
+const cats = CONFIG.CAT_ORDER.filter(c=>byCat[c]);
+const pays = Object.keys(byPay).sort((a,b)=>byPay[b]-byPay[a]);
+const isComp = p => p.indexOf('Panic Production')===0;
+const LAUN = byCat['Laun og verktakagreiðslur']||0;
+const utlagt = TX.filter(t=>!isComp(t.p));
+const flagged = TX.filter(t=>t.n && /staðfest|óviss|óþekkt|illlæsileg|voucher/i.test(t.n) && !/staðfestur|– staðfest/.test(t.n));
+
+// ---------- KPIs ----------
+(function(){
+  const dates = TX.map(t=>t.d).sort();
+  const cards=[
+    {k:'Gjöld samtals', v:fmt(TOTAL)+' kr.', s:TX.length+' færslur · m/VSK'},
+    {k:'Laun & verktakar', v:fmt(LAUN)+' kr.', s:(LAUN/TOTAL*100).toFixed(0)+'% af heild', cls:'orange'},
+    {k:'Annar kostnaður', v:fmt(TOTAL-LAUN)+' kr.', s:((TOTAL-LAUN)/TOTAL*100).toFixed(0)+'% af heild'},
+    {k:'Útlagt af einstaklingum', v:fmt(sum(utlagt))+' kr.', s:utlagt.length+' kvittanir · til endurgreiðslu'},
+    {k:'Stærsti flokkur (án launa)', v:fmtK(byCat['Efni – leikmynd og búningar']), s:'Efni – leikmynd og búningar'},
+    {k:'Tímabil', v:fmtD(dates[0])+' – '+fmtD(dates[dates.length-1]), s:'2026 · '+Object.keys(cnt('f')).length+' möppur í Drive'}
+  ];
+  document.getElementById('kpis').innerHTML=cards.map(c=>`<div class="kpi"><div class="k">${c.k}</div><div class="v ${c.cls||''}">${c.v}</div><div class="s">${c.s||''}</div></div>`).join('');
+  document.getElementById('upd').textContent=CONFIG.UPDATED;
+  document.getElementById('nfaer').textContent=TX.length;
+})();
+
+// ---------- summary text ----------
+(function(){
+  const top3 = cats.slice(0,3).map(c=>`<b>${c}</b> ${fmtK(byCat[c])}`).join(' · ');
+  document.getElementById('sum1').innerHTML=`Heildargjöld <b>${fmt(TOTAL)} kr.</b> Laun og verktakagreiðslur eru <b>${(LAUN/TOTAL*100).toFixed(0)}%</b> (sex reikningar á 750.000 kr. auk dramaturgs frá Belgíu). Næst: ${top3.replace(/^<b>[^<]*<\/b> [^·]*· /,'')}.`;
+  const ind = pays.filter(p=>!isComp(p)).slice(0,4).map(p=>`<b>${p.split(' (')[0]}</b> ${fmtK(byPay[p])}`).join(' · ');
+  document.getElementById('sum2').innerHTML=`Reikningar á félagið <b>${fmtK(pays.filter(isComp).reduce((s,p)=>s+byPay[p],0))}</b>. Útlagt af einstaklingum samtals <b>${fmt(sum(utlagt))} kr.</b>: ${ind}.`;
+  const m={}; TX.forEach(t=>{const k=t.d.slice(0,7); m[k]=(m[k]||0)+t.isk;});
+  const mk=Object.keys(m).sort(); const peak=mk.reduce((a,b)=>m[a]>m[b]?a:b);
+  document.getElementById('sum3').innerHTML=`Kostnaður féll frá <b>mars til ágúst 2026</b>. Þyngsti mánuðurinn var <b>${MON[parseInt(peak.slice(5))-1]}</b> (${fmtK(m[peak])}) þegar launareikningar og frumsýningarkostnaður komu inn. Efniskaup Jóní voru mest í maí–júní, matur og veitingar í ágúst.`;
+  document.getElementById('sum4').innerHTML = flagged.length ? flagged.map(t=>`<b>${t.s}</b> (${fmt(t.isk)} kr.): ${t.n}`).join('<br>') : 'Allar færslur staðfestar.';
+})();
+
+// ---------- charts ----------
+new Chart(document.getElementById('catchart'),{type:'bar',
+  data:{labels:cats,datasets:[{data:cats.map(c=>byCat[c]),backgroundColor:cats.map(c=>c.indexOf('Laun')===0?'#ED7D31':'#2E5496'),borderRadius:4,barPercentage:.74}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)+' kr. ('+(c.parsed.x/TOTAL*100).toFixed(1)+'%)'}}},
+    scales:{x:{ticks:{callback:v=>fmt(v/1000)+' þ.'}},y:{ticks:{font:{size:11}}}}}});
+
+const payCols=['#1F3864','#2E5496','#ED7D31','#6b8fd6','#f0a36b','#9aa3b0','#c7d2e8','#d9b38c','#7b8794','#e0e4ea'];
+new Chart(document.getElementById('paychart'),{type:'doughnut',
+  data:{labels:pays.map(p=>p.split(' (')[0]),datasets:[{data:pays.map(p=>byPay[p]),backgroundColor:payCols,borderWidth:1}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{boxWidth:11,font:{size:10.5}}},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' kr.'}}}}});
+document.querySelector('#paytbl tbody').innerHTML = pays.map(p=>`<tr><td>${p}</td><td class="r">${cntPay[p]}</td><td class="r">${fmt(byPay[p])}</td></tr>`).join('')+`<tr class="tot"><td>Samtals</td><td class="r">${TX.length}</td><td class="r">${fmt(TOTAL)}</td></tr>`;
+
+(function(){
+  const months=[...new Set(TX.map(t=>t.d.slice(0,7)))].sort();
+  const catCols={'Laun og verktakagreiðslur':'#ED7D31','Efni – leikmynd og búningar':'#1F3864','Húsnæði – æfingasalur':'#2E5496','Matur og veitingar':'#6b8fd6','Ferðakostnaður':'#9aa3b0'};
+  const groups=cats.map(c=>catCols[c]?c:'Annað samtals');
+  const gset=[...new Set(groups)];
+  const ds=gset.map((g,i)=>({label:g,data:months.map(m=>sum(TX.filter(t=>t.d.slice(0,7)===m && (catCols[t.c]?t.c===g:g==='Annað samtals')))),backgroundColor:catCols[g]||'#c7d2e8',borderRadius:2}));
+  new Chart(document.getElementById('monchart'),{type:'bar',data:{labels:months.map(m=>MON[parseInt(m.slice(5))-1]+' '+m.slice(0,4)),datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:11,font:{size:10.5}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)+' kr.'}}},
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>fmt(v/1000)+' þ.'}}}}});
+})();
+
+// ---------- rekstrarreikningur ----------
+document.querySelector('#rr tbody').innerHTML =
+  `<tr><td><b>Tekjur</b></td><td class="r">–</td><td class="r"></td></tr>` +
+  cats.map(c=>`<tr><td>${c}</td><td class="r">${fmt(byCat[c])}</td><td class="r">${(byCat[c]/TOTAL*100).toFixed(1)}%</td></tr>`).join('') +
+  `<tr class="tot"><td>Gjöld samtals</td><td class="r">${fmt(TOTAL)}</td><td class="r">100%</td></tr>` +
+  `<tr class="tot"><td style="color:var(--red)">Rekstrarniðurstaða</td><td class="r" style="color:var(--red)">(${fmt(TOTAL)})</td><td class="r"></td></tr>`;
+
+// ---------- top 10 ----------
+document.querySelector('#top10 tbody').innerHTML = TX.slice().sort((a,b)=>b.isk-a.isk).slice(0,10).map(t=>`<tr><td>${fmtD(t.d)}</td><td>${t.s}</td><td><span class="pill ${t.c.indexOf('Laun')===0?'p-b':'p-a'}">${t.c.split(' ')[0]}</span></td><td class="r">${fmt(t.isk)}</td></tr>`).join('');
+
+// ---------- cross tab ----------
+(function(){
+  const short=p=>p.indexOf('Panic')===0?(p.indexOf('krafa')>0?'PP krafa':'PP reikn.'):p.split(' (')[0].split(' ')[0];
+  const cols=pays;
+  document.querySelector('#cross thead').innerHTML='<tr><th>Flokkur</th>'+cols.map(p=>`<th class="r">${short(p)}</th>`).join('')+'<th class="r">Alls</th></tr>';
+  document.querySelector('#cross tbody').innerHTML=cats.map(c=>'<tr><td>'+c.split(' – ')[0].split(' og ')[0]+'</td>'+cols.map(p=>{const v=sum(TX.filter(t=>t.c===c&&t.p===p));return `<td class="r">${v?fmt(v/1000):'–'}</td>`;}).join('')+`<td class="r"><b>${fmt(byCat[c]/1000)}</b></td></tr>`).join('')
+   +'<tr class="tot"><td>Alls</td>'+cols.map(p=>`<td class="r">${fmt(byPay[p]/1000)}</td>`).join('')+`<td class="r">${fmt(TOTAL/1000)}</td></tr>`;
+})();
+
+// ---------- transactions ----------
+(function(){
+  const fc=document.getElementById('fcat'), fp=document.getElementById('fpay'), fq=document.getElementById('fq');
+  cats.forEach(c=>fc.insertAdjacentHTML('beforeend',`<option>${c}</option>`));
+  pays.forEach(p=>fp.insertAdjacentHTML('beforeend',`<option>${p}</option>`));
+  const sorted=TX.slice().sort((a,b)=>a.d.localeCompare(b.d)).map((t,i)=>({...t,i:i+1}));
+  function render(){
+    const q=fq.value.toLowerCase();
+    const rows=sorted.filter(t=>(!fc.value||t.c===fc.value)&&(!fp.value||t.p===fp.value)&&(!q||(t.s+' '+t.l+' '+(t.n||'')).toLowerCase().includes(q)));
+    document.querySelector('#tx tbody').innerHTML=rows.map(t=>`<tr><td>${t.i}</td><td style="white-space:nowrap">${t.d.split('-').reverse().join('.')}</td><td>${t.s}</td><td>${t.l}</td><td><span class="pill ${t.c.indexOf('Laun')===0?'p-b':'p-a'}">${t.c}</span></td><td>${t.p}</td><td class="r">${t.u==null?'–':(t.m==='ISK'?fmt(t.u):t.u.toLocaleString('is-IS')+' '+t.m)}</td><td class="r">${fmt(t.isk)}</td><td class="${t.n&&!/staðfest/.test(t.n)?'flag':''}" style="font-size:11px">${t.n||''}</td></tr>`).join('');
+    document.getElementById('txsum').textContent=rows.length+' færslur · samtals '+fmt(sum(rows))+' kr.';
+  }
+  [fc,fp].forEach(e=>e.addEventListener('change',render)); fq.addEventListener('input',render);
+  document.getElementById('fclr').addEventListener('click',()=>{fc.value='';fp.value='';fq.value='';render();});
+  render();
+})();
+</script>
+</body>
+</html>
